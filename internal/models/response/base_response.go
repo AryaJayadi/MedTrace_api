@@ -1,4 +1,4 @@
-package models
+package response
 
 type ErrorInfo struct {
 	Code    int    `json:"code"`

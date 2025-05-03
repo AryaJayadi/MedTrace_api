@@ -1,4 +1,4 @@
-package models
+package entity
 
 type Drug struct {
 	ID          string `json:"ID"`          // Unique drug ID

@@ -1,4 +1,4 @@
-package models
+package response
 
 func SuccessValueResponse(value any) BaseValueResponse {
 	return BaseValueResponse{
