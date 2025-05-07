@@ -19,15 +19,19 @@ func NewBatchService(contract *client.Contract) *BatchService {
 }
 
 func (s *BatchService) CreateBatch(ctx context.Context, req *batch.BatchCreate) response.BaseValueResponse {
-	resp, err := s.contract.SubmitTransaction("CreateBatch", req)
+	reqJSON, err := json.Marshal(req)
 	if err != nil {
-		return response.ErrorValueResponse(500, "Failed to submit transaction")
+		return response.ErrorValueResponse(400, "Failed to marshal request")
+	}
+
+	resp, err := s.contract.SubmitTransaction("CreateBatch", string(reqJSON))
+	if err != nil {
+		return response.ErrorValueResponse(500, "Failed to submit transaction to Fabric")
 	}
 
 	var batch entity.Batch
-	err = json.Unmarshal(resp, &batch)
-	if err != nil {
-		return response.ErrorValueResponse(500, "Error unmarshaling JSON")
+	if err := json.Unmarshal(resp, &batch); err != nil {
+		return response.ErrorValueResponse(500, "Failed to unmarshal Fabric response")
 	}
 
 	return response.SuccessValueResponse(batch)
