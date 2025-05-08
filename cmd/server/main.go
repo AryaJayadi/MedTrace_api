@@ -1,10 +1,15 @@
 package main
 
 import (
-	"log"
+	"fmt"
+	"os"
 
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+	"github.com/AryaJayadi/MedTrace_api/cmd/fabric"
+	"github.com/AryaJayadi/MedTrace_api/internal/handlers"
+	"github.com/AryaJayadi/MedTrace_api/internal/services"
+
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 const (
@@ -26,37 +31,35 @@ func main() {
 	orgConfig := fabric.OrgSetup{
 		OrgName:      OrgName,
 		MSPID:        mspID,
-		cryptoPath:   cryptoPath,
-		certPath:     certPath,
-		keyPath:      keyPath,
-		tlsCertPath:  tlsCertPath,
-		peerEndpoint: peerEndpoint,
-		gatewayPeer:  gatewayPeer,
-		gateway:      nil,
+		CertPath:     certPath,
+		KeyPath:      keyPath,
+		TLSCertPath:  tlsCertPath,
+		PeerEndpoint: peerEndpoint,
+		GatewayPeer:  gatewayPeer,
 	}
-	setup := fabric.Initialize()
-
-	// Setup Fabric Gateway and Contract
-	contract, err := services.SetupFabricContract()
+	orgSetup, err := fabric.Initialize(orgConfig)
 	if err != nil {
-		log.Fatal("Failed to connect to Fabric:", err)
+		fmt.Println("Error initializing setup for Org1: ", err)
 	}
 
-	// Initialize services
+	chaincodeName := "drugtrace"
+	if ccname := os.Getenv("CHAINCODE_NAME"); ccname != "" {
+		chaincodeName = ccname
+	}
+
+	channelName := "medtrace"
+	if cname := os.Getenv("CHANNEL_NAME"); cname != "" {
+		channelName = cname
+	}
+
+	network := orgSetup.Gateway.GetNetwork(channelName)
+	contract := network.GetContract(chaincodeName)
+
 	batchService := services.NewBatchService(contract)
-	// drugService := services.NewDrugService(contract) // similarly
 
-	// Initialize handlers
 	batchHandler := handlers.NewBatchHandler(batchService)
-	// drugHandler := handlers.NewDrugHandler(drugService)
 
-	// Define routes
-	// For clarity, we skip versioning here. In real apps consider /api/v1.
 	e.POST("/batches", batchHandler.CreateBatch)
-	e.GET("/batches/:id", batchHandler.GetBatch)
-	// e.POST("/drugs", drugHandler.CreateDrug)
-	// e.GET("/drugs/:id", drugHandler.GetDrug)
 
-	// Start the server on port 8080
 	e.Logger.Fatal(e.Start(":8080"))
 }

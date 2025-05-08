@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/AryaJayadi/SupplyChain_api/internal/models/dto/batch"
-	"github.com/AryaJayadi/SupplyChain_api/internal/models/entity"
-	"github.com/AryaJayadi/SupplyChain_api/internal/models/response"
+	"github.com/AryaJayadi/MedTrace_api/internal/models/dto/batch"
+	"github.com/AryaJayadi/MedTrace_api/internal/models/entity"
+	"github.com/AryaJayadi/MedTrace_api/internal/models/response"
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 )
 
