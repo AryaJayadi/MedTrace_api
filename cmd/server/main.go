@@ -42,7 +42,7 @@ func main() {
 		fmt.Println("Error initializing setup for Org1: ", err)
 	}
 
-	chaincodeName := "drugtrace"
+	chaincodeName := "medtrace_cc"
 	if ccname := os.Getenv("CHAINCODE_NAME"); ccname != "" {
 		chaincodeName = ccname
 	}
