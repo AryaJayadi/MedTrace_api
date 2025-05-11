@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/AryaJayadi/MedTrace_api/internal/models/dto/batch"
 	"github.com/AryaJayadi/MedTrace_api/internal/models/entity"
@@ -26,7 +27,8 @@ func (s *BatchService) CreateBatch(ctx context.Context, req *batch.BatchCreate) 
 
 	resp, err := s.contract.SubmitTransaction("CreateBatch", string(reqJSON))
 	if err != nil {
-		return response.ErrorValueResponse(500, "Failed to submit transaction to Fabric")
+		msg := fmt.Sprintf("Failed to submit transaction to Fabric: %v", err)
+		return response.ErrorValueResponse(500, msg)
 	}
 
 	var batch entity.Batch
