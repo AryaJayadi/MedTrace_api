@@ -3,100 +3,101 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath" // For constructing paths robustly
 
 	"github.com/AryaJayadi/MedTrace_api/cmd/fabric"
 	"github.com/AryaJayadi/MedTrace_api/internal/handlers"
 	"github.com/AryaJayadi/MedTrace_api/internal/services"
 
+	"github.com/joho/godotenv" // Import godotenv
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
-// --- Organization 1 Configurations ---
+// You can keep these const blocks for different orgs as a reference
+// or if you ever need to switch back to hardcoded multi-org setup,
+// but they won't be used directly for the .env configuration.
+
+// --- Organization 1 Configurations (Reference) ---
 const (
-	Org1Name         = "Org1"
-	Org1mspID        = "Org1MSP"
-	Org1cryptoPath   = "../../test-network/organizations/peerOrganizations/org1.example.com" // Adjust if your path is different
-	Org1certPath     = Org1cryptoPath + "/users/User1@org1.example.com/msp/signcerts"
-	Org1keyPath      = Org1cryptoPath + "/users/User1@org1.example.com/msp/keystore"
-	Org1tlsCertPath  = Org1cryptoPath + "/peers/peer0.org1.example.com/tls/ca.crt"
-	Org1peerEndpoint = "dns:///localhost:7051" // Default for Fabric test-network Org1
-	Org1gatewayPeer  = "peer0.org1.example.com"
+	_Org1Name  = "Org1" // Prefix with _ to indicate they are for reference
+	_Org1mspID = "Org1MSP"
+	// ... other Org1 constants
 )
 
-// --- Organization 2 Configurations ---
+// --- Organization 2 Configurations (Reference) ---
 const (
-	Org2Name         = "Org2"                                                                // EXAMPLE: Replace with actual Org2 name
-	Org2mspID        = "Org2MSP"                                                             // EXAMPLE: Replace with actual Org2 MSP ID
-	Org2cryptoPath   = "../../test-network/organizations/peerOrganizations/org2.example.com" // EXAMPLE: Adjust path for Org2
-	Org2certPath     = Org2cryptoPath + "/users/User1@org2.example.com/msp/signcerts"        // EXAMPLE: Adjust user and path for Org2
-	Org2keyPath      = Org2cryptoPath + "/users/User1@org2.example.com/msp/keystore"         // EXAMPLE: Adjust user and path for Org2
-	Org2tlsCertPath  = Org2cryptoPath + "/peers/peer0.org2.example.com/tls/ca.crt"           // EXAMPLE: Adjust peer and path for Org2
-	Org2peerEndpoint = "dns:///localhost:9051"                                               // EXAMPLE: Adjust port for Org2 peer (default for Fabric test-network Org2 is 9051)
-	Org2gatewayPeer  = "peer0.org2.example.com"                                              // EXAMPLE: Adjust gateway peer for Org2
-)
-
-// --- Organization 3 Configurations (Example - Add as many as you need) ---
-const (
-	Org3Name         = "Org3"                                                                // EXAMPLE: Replace with actual Org3 name
-	Org3mspID        = "Org3MSP"                                                             // EXAMPLE: Replace with actual Org3 MSP ID
-	Org3cryptoPath   = "../../test-network/organizations/peerOrganizations/org3.example.com" // EXAMPLE: Adjust path for Org3
-	Org3certPath     = Org3cryptoPath + "/users/User1@org3.example.com/msp/signcerts"        // EXAMPLE: Adjust user and path for Org3
-	Org3keyPath      = Org3cryptoPath + "/users/User1@org3.example.com/msp/keystore"         // EXAMPLE: Adjust user and path for Org3
-	Org3tlsCertPath  = Org3cryptoPath + "/peers/peer0.org3.example.com/tls/ca.crt"           // EXAMPLE: Adjust peer and path for Org3
-	Org3peerEndpoint = "dns:///localhost:11051"                                              // EXAMPLE: Adjust port for Org3 peer (default for Fabric test-network Org3 if using a similar pattern might be 11051)
-	Org3gatewayPeer  = "peer0.org3.example.com"                                              // EXAMPLE: Adjust gateway peer for Org3
-)
-
-// Choose which organization this instance of the API will represent
-// This could also be determined by an environment variable or a config file
-const (
-	ActiveOrgName      = Org1Name         // Or Org2Name, Org3Name
-	ActiveMspID        = Org1mspID        // Or Org2mspID, Org3mspID
-	ActiveCryptoPath   = Org1cryptoPath   // Or Org2cryptoPath, Org3cryptoPath
-	ActiveCertPath     = Org1certPath     // Or Org2certPath, Org3certPath
-	ActiveKeyPath      = Org1keyPath      // Or Org2keyPath, Org3keyPath
-	ActiveTlsCertPath  = Org1tlsCertPath  // Or Org2tlsCertPath, Org3tlsCertPath
-	ActivePeerEndpoint = Org1peerEndpoint // Or Org2peerEndpoint, Org3peerEndpoint
-	ActiveGatewayPeer  = Org1gatewayPeer  // Or Org2gatewayPeer, Org3gatewayPeer
+	_Org2Name  = "Org2"
+	_Org2mspID = "Org2MSP"
+	// ... other Org2 constants
 )
 
 func main() {
+	// Load .env file.
+	// This will load environment variables from a .env file in the current directory.
+	// If .env is not found, it will not throw an error, allowing environment variables
+	// to be set by the system as well.
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Warning: Error loading .env file, will rely on system environment variables:", err)
+	}
+
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	// Use the "Active" organization's configuration for initialization
-	orgConfig := fabric.OrgSetup{
-		OrgName:      ActiveOrgName,
-		MSPID:        ActiveMspID,
-		CertPath:     ActiveCertPath,
-		KeyPath:      ActiveKeyPath,
-		TLSCertPath:  ActiveTlsCertPath,
-		PeerEndpoint: ActivePeerEndpoint,
-		GatewayPeer:  ActiveGatewayPeer,
+	// Read configuration from environment variables (loaded from .env or system)
+	orgName := os.Getenv("ORG_NAME")
+	mspID := os.Getenv("MSP_ID")
+	cryptoPath := os.Getenv("CRYPTO_PATH")
+	userIdentity := os.Getenv("USER_IDENTITY") // e.g., User1@org1.example.com
+	peerHostname := os.Getenv("PEER_HOSTNAME") // e.g., peer0.org1.example.com
+	peerEndpoint := os.Getenv("PEER_ENDPOINT")
+
+	if orgName == "" || mspID == "" || cryptoPath == "" || userIdentity == "" || peerHostname == "" || peerEndpoint == "" {
+		// Handle missing critical environment variables
+		// You might want to panic or provide default values if appropriate,
+		// but for Fabric connection, these are usually essential.
+		panic("Error: Missing one or more required environment variables for Fabric connection (ORG_NAME, MSP_ID, CRYPTO_PATH, USER_IDENTITY, PEER_HOSTNAME, PEER_ENDPOINT)")
 	}
 
-	fmt.Printf("Initializing API for organization: %s (MSP: %s)\n", orgConfig.OrgName, orgConfig.MSPID)
+	// Construct full paths
+	certPath := filepath.Join(cryptoPath, "users", userIdentity, "msp", "signcerts")
+	keyPath := filepath.Join(cryptoPath, "users", userIdentity, "msp", "keystore")
+	tlsCertPath := filepath.Join(cryptoPath, "peers", peerHostname, "tls", "ca.crt")
 
-	orgSetup, err := fabric.Initialize(orgConfig)
-	if err != nil {
-		// Consider more robust error handling or logging to a file in production
-		fmt.Printf("Error initializing setup for %s: %v\n", orgConfig.OrgName, err)
-		// os.Exit(1) or panic("Failed to initialize Fabric setup") might be appropriate
-		// depending on whether the application can run without Fabric.
-		panic(fmt.Sprintf("Error initializing setup for %s: %v", orgConfig.OrgName, err))
+	orgConfig := fabric.OrgSetup{
+		OrgName:      orgName,
+		MSPID:        mspID,
+		CertPath:     certPath,
+		KeyPath:      keyPath,
+		TLSCertPath:  tlsCertPath,
+		PeerEndpoint: peerEndpoint,
+		GatewayPeer:  peerHostname, // GatewayPeer is often the same as the peer you're connecting to
+	}
+
+	fmt.Printf("Initializing API for organization: %s (MSP: %s) using user: %s\n", orgConfig.OrgName, orgConfig.MSPID, userIdentity)
+	fmt.Printf("CryptoPath: %s\n", cryptoPath)
+	fmt.Printf("CertPath: %s\n", orgConfig.CertPath)
+	fmt.Printf("KeyPath: %s\n", orgConfig.KeyPath)
+	fmt.Printf("TLSCertPath: %s\n", orgConfig.TLSCertPath)
+	fmt.Printf("PeerEndpoint: %s\n", orgConfig.PeerEndpoint)
+	fmt.Printf("GatewayPeer: %s\n", orgConfig.GatewayPeer)
+
+	orgSetup, setupErr := fabric.Initialize(orgConfig)
+	if setupErr != nil {
+		panic(fmt.Sprintf("Error initializing Fabric setup for %s: %v", orgConfig.OrgName, setupErr))
 	}
 	fmt.Printf("Successfully initialized Fabric setup for: %s\n", orgConfig.OrgName)
 
-	chaincodeName := "drugtrace"
-	if ccname := os.Getenv("CHAINCODE_NAME"); ccname != "" {
-		chaincodeName = ccname
+	chaincodeName := os.Getenv("CHAINCODE_NAME")
+	if chaincodeName == "" {
+		chaincodeName = "drugtrace" // Default if not set
 	}
 
-	channelName := "medtrace"
-	if cname := os.Getenv("CHANNEL_NAME"); cname != "" {
-		channelName = cname
+	channelName := os.Getenv("CHANNEL_NAME")
+	if channelName == "" {
+		channelName = "medtrace" // Default if not set
 	}
 
 	fmt.Printf("Accessing chaincode '%s' on channel '%s'\n", chaincodeName, channelName)
@@ -107,19 +108,12 @@ func main() {
 	batchService := services.NewBatchService(contract)
 	batchHandler := handlers.NewBatchHandler(batchService)
 
-	// API Grouping (Optional but good practice)
-	apiGroup := e.Group("/api/v1") // Example API versioning
-
-	// Routes
+	apiGroup := e.Group("/api/v1")
 	apiGroup.POST("/batches", batchHandler.CreateBatch)
-	// Add more routes here as needed, e.g.:
-	// apiGroup.GET("/batches/:id", batchHandler.GetBatchByID)
-	// apiGroup.PUT("/batches/:id", batchHandler.UpdateBatch)
-	// apiGroup.GET("/batches", batchHandler.GetAllBatches)
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080" // Default port if not specified
+		port = "8080"
 	}
 	fmt.Printf("Starting server on port %s\n", port)
 	e.Logger.Fatal(e.Start(":" + port))
