@@ -8,8 +8,8 @@ import (
 	"github.com/AryaJayadi/MedTrace_api/cmd/fabric"
 	"github.com/AryaJayadi/MedTrace_api/internal/handlers"
 	"github.com/AryaJayadi/MedTrace_api/internal/services"
+	"github.com/joho/godotenv"
 
-	"github.com/joho/godotenv" // Import godotenv
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
