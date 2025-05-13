@@ -42,3 +42,19 @@ func (h *BatchHandler) GetAllBatches(c echo.Context) error {
 
 	return c.JSON(status, resp)
 }
+
+func (h *BatchHandler) UpdateBatch(c echo.Context) error {
+	var req batch.UpdateBatch
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+	}
+
+	resp := h.service.UpdateBatch(c.Request().Context(), &req)
+
+	status := http.StatusOK
+	if !resp.Success {
+		status = http.StatusInternalServerError
+	}
+
+	return c.JSON(status, resp)
+}
