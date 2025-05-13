@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/AryaJayadi/MedTrace_api/internal/models/dto/batch"
 	"github.com/AryaJayadi/MedTrace_api/internal/models/entity"
@@ -19,21 +18,20 @@ func NewBatchService(contract *client.Contract) *BatchService {
 	return &BatchService{contract: contract}
 }
 
-func (s *BatchService) CreateBatch(ctx context.Context, req *batch.BatchCreate) response.BaseValueResponse {
+func (s *BatchService) CreateBatch(ctx context.Context, req *batch.BatchCreate) response.BaseValueResponse[entity.Batch] {
 	reqJSON, err := json.Marshal(req)
 	if err != nil {
-		return response.ErrorValueResponse(400, "Failed to marshal request")
+		return response.ErrorValueResponse[entity.Batch](500, "Failed to marshal request: %v", err)
 	}
 
 	resp, err := s.contract.SubmitTransaction("CreateBatch", string(reqJSON))
 	if err != nil {
-		msg := fmt.Sprintf("Failed to submit transaction to Fabric: %v", err)
-		return response.ErrorValueResponse(500, msg)
+		return response.ErrorValueResponse[entity.Batch](500, "Failed to submit transaction to Fabric: %v", err)
 	}
 
 	var batch entity.Batch
 	if err := json.Unmarshal(resp, &batch); err != nil {
-		return response.ErrorValueResponse(500, "Failed to unmarshal Fabric response")
+		return response.ErrorValueResponse[entity.Batch](500, "Failed to unmarshal Fabric response: %v", err)
 	}
 
 	return response.SuccessValueResponse(batch)
