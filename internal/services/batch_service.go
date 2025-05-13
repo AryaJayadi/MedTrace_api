@@ -18,7 +18,7 @@ func NewBatchService(contract *client.Contract) *BatchService {
 	return &BatchService{contract: contract}
 }
 
-func (s *BatchService) CreateBatch(ctx context.Context, req *batch.BatchCreate) response.BaseValueResponse[entity.Batch] {
+func (s *BatchService) CreateBatch(ctx context.Context, req *batch.CreateBatch) response.BaseValueResponse[entity.Batch] {
 	reqJSON, err := json.Marshal(req)
 	if err != nil {
 		return response.ErrorValueResponse[entity.Batch](500, "Failed to marshal request: %v", err)
@@ -54,4 +54,23 @@ func (s *BatchService) GetAllBatches(ctx context.Context) response.BaseListRespo
 	}
 
 	return response.SuccessListResponse(ptrList)
+}
+
+func (s *BatchService) UpdateBatch(ctx context.Context, req *batch.UpdateBatch) response.BaseValueResponse[entity.Batch] {
+	reqJSON, err := json.Marshal(req)
+	if err != nil {
+		return response.ErrorValueResponse[entity.Batch](500, "Failed to marshal request: %v", err)
+	}
+
+	resp, err := s.contract.SubmitTransaction("UpdateBatch", string(reqJSON))
+	if err != nil {
+		return response.ErrorValueResponse[entity.Batch](500, "Failed to submit transaction to Fabric: %v", err)
+	}
+
+	var batch entity.Batch
+	if err := json.Unmarshal(resp, &batch); err != nil {
+		return response.ErrorValueResponse[entity.Batch](500, "Failed to unmarshal Fabric response: %v", err)
+	}
+
+	return response.SuccessValueResponse(batch)
 }
