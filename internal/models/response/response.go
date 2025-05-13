@@ -2,16 +2,16 @@ package response
 
 import "fmt"
 
-func SuccessValueResponse(value any) BaseValueResponse {
-	return BaseValueResponse{
+func SuccessValueResponse[T any](value T) BaseValueResponse[T] {
+	return BaseValueResponse[T]{
 		Success: true,
-		Value:   value,
+		Value:   &value,
 		Error:   nil,
 	}
 }
 
-func ErrorValueResponse(code int, format string, args ...any) BaseValueResponse {
-	return BaseValueResponse{
+func ErrorValueResponse[T any](code int, format string, args ...any) BaseValueResponse[T] {
+	return BaseValueResponse[T]{
 		Success: false,
 		Value:   nil,
 		Error: &ErrorInfo{
@@ -21,7 +21,7 @@ func ErrorValueResponse(code int, format string, args ...any) BaseValueResponse 
 	}
 }
 
-func SuccessListResponse[T any](list []T) BaseListResponse[T] {
+func SuccessListResponse[T any](list []*T) BaseListResponse[T] {
 	return BaseListResponse[T]{
 		Success: true,
 		List:    list,

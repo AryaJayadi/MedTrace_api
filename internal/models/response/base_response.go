@@ -5,14 +5,14 @@ type ErrorInfo struct {
 	Message string `json:"message"`
 }
 
-type BaseValueResponse struct {
+type BaseValueResponse[T any] struct {
 	Success bool       `json:"success"`
-	Value   any        `json:"value,omitempty"` // T
-	Error   *ErrorInfo `json:"error,omitempty"` // optional
+	Value   *T         `json:"value,omitempty"`
+	Error   *ErrorInfo `json:"error,omitempty"`
 }
 
 type BaseListResponse[T any] struct {
 	Success bool       `json:"success"`
-	List    []T        `json:"list,omitempty"`  // []T
-	Error   *ErrorInfo `json:"error,omitempty"` // optional
+	List    []*T       `json:"list,omitempty"`
+	Error   *ErrorInfo `json:"error,omitempty"`
 }
