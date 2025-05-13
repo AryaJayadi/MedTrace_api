@@ -1,5 +1,7 @@
 package response
 
+import "fmt"
+
 func SuccessValueResponse(value any) BaseValueResponse {
 	return BaseValueResponse{
 		Success: true,
@@ -8,26 +10,32 @@ func SuccessValueResponse(value any) BaseValueResponse {
 	}
 }
 
-func ErrorValueResponse(code int, msg string) BaseValueResponse {
+func ErrorValueResponse(code int, format string, args ...any) BaseValueResponse {
 	return BaseValueResponse{
 		Success: false,
 		Value:   nil,
-		Error:   &ErrorInfo{Code: code, Message: msg},
+		Error: &ErrorInfo{
+			Code:    code,
+			Message: fmt.Sprintf(format, args...),
+		},
 	}
 }
 
-func SuccessListResponse(list []any) BaseListResponse {
-	return BaseListResponse{
+func SuccessListResponse[T any](list []T) BaseListResponse[T] {
+	return BaseListResponse[T]{
 		Success: true,
 		List:    list,
 		Error:   nil,
 	}
 }
 
-func ErrorListResponse(code int, msg string) BaseListResponse {
-	return BaseListResponse{
+func ErrorListResponse[T any](code int, format string, args ...any) BaseListResponse[T] {
+	return BaseListResponse[T]{
 		Success: false,
 		List:    nil,
-		Error:   &ErrorInfo{Code: code, Message: msg},
+		Error: &ErrorInfo{
+			Code:    code,
+			Message: fmt.Sprintf(format, args...),
+		},
 	}
 }

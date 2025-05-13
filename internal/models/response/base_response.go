@@ -11,8 +11,8 @@ type BaseValueResponse struct {
 	Error   *ErrorInfo `json:"error,omitempty"` // optional
 }
 
-type BaseListResponse struct {
+type BaseListResponse[T any] struct {
 	Success bool       `json:"success"`
-	List    []any      `json:"list,omitempty"`  // []T
+	List    []T        `json:"list,omitempty"`  // []T
 	Error   *ErrorInfo `json:"error,omitempty"` // optional
 }
