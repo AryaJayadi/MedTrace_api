@@ -31,3 +31,14 @@ func (h *BatchHandler) CreateBatch(c echo.Context) error {
 
 	return c.JSON(status, resp)
 }
+
+func (h *BatchHandler) GetAllBatches(c echo.Context) error {
+	resp := h.service.GetAllBatches(c.Request().Context())
+
+	status := http.StatusOK
+	if !resp.Success {
+		status = http.StatusInternalServerError
+	}
+
+	return c.JSON(status, resp)
+}
