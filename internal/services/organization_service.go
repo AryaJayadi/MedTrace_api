@@ -18,7 +18,7 @@ func NewOrganizationService(contract *client.Contract) *OrganizationService {
 }
 
 func (s *OrganizationService) GetOrganizations(ctx context.Context) response.BaseListResponse[entity.Organization] {
-	resp, err := s.contract.EvaluateTransaction("GetOrganizations")
+	resp, err := s.contract.EvaluateTransaction("GetAllOrganizations")
 	if err != nil {
 		return response.ErrorListResponse[entity.Organization](500, "Failed to evaluate transaction to Fabric: %v", err)
 	}
