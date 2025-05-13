@@ -28,5 +28,10 @@ func (s *OrganizationService) GetOrganizations(ctx context.Context) response.Bas
 		return response.ErrorListResponse[entity.Organization](500, "Failed to unmarshal Fabric response: %v", err)
 	}
 
-	return response.SuccessListResponse(organizations)
+	ptrList := make([]*entity.Organization, len(organizations))
+	for i := range organizations {
+		ptrList[i] = &organizations[i]
+	}
+
+	return response.SuccessListResponse(ptrList)
 }
