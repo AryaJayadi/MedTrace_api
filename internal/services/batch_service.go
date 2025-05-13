@@ -36,3 +36,22 @@ func (s *BatchService) CreateBatch(ctx context.Context, req *batch.BatchCreate) 
 
 	return response.SuccessValueResponse(batch)
 }
+
+func (s *BatchService) GetAllBatches(ctx context.Context) response.BaseListResponse[entity.Batch] {
+	resp, err := s.contract.EvaluateTransaction("GetAllBatches")
+	if err != nil {
+		return response.ErrorListResponse[entity.Batch](500, "Failed to evaluate transaction: %v", err)
+	}
+
+	var batches []entity.Batch
+	if err := json.Unmarshal(resp, &batches); err != nil {
+		return response.ErrorListResponse[entity.Batch](500, "Failed to unmarshal Fabric response: %v", err)
+	}
+
+	ptrList := make([]*entity.Batch, len(batches))
+	for i := range batches {
+		ptrList[i] = &batches[i]
+	}
+
+	return response.SuccessListResponse(ptrList)
+}
