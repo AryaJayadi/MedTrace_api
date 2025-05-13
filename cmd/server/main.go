@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/AryaJayadi/MedTrace_api/cmd/fabric"
@@ -39,7 +39,7 @@ func main() {
 	}
 	orgSetup, err := fabric.Initialize(orgConfig)
 	if err != nil {
-		fmt.Println("Error initializing setup for Org1: ", err)
+		log.Fatalf("Failed to initialize Fabric Org: %v", err)
 	}
 
 	chaincodeName := "medtrace_cc"
@@ -55,10 +55,13 @@ func main() {
 	network := orgSetup.Gateway.GetNetwork(channelName)
 	contract := network.GetContract(chaincodeName)
 
+	organizationService := services.NewOrganizationService(contract)
 	batchService := services.NewBatchService(contract)
 
+	organizationHandler := handlers.NewOrganizationHandler(organizationService)
 	batchHandler := handlers.NewBatchHandler(batchService)
 
+	e.GET("/organizations", organizationHandler.GetOrganizations)
 	e.POST("/batches", batchHandler.CreateBatch)
 
 	e.Logger.Fatal(e.Start(":8080"))
