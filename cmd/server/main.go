@@ -63,6 +63,7 @@ func main() {
 
 	e.GET("/organizations", organizationHandler.GetOrganizations)
 	e.POST("/batches", batchHandler.CreateBatch)
+	e.GET("/batches", batchHandler.GetAllBatches)
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
