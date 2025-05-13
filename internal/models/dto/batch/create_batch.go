@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type BatchCreate struct {
+type CreateBatch struct {
 	Amount         int       `json:"Amount" xml:"Amount" form:"Amount"`                         // Amount of drugs in the batch
 	Description    string    `json:"Description" xml:"Description" form:"Description"`          // Drug description
 	Manufacturer   string    `json:"Manufacturer" xml:"Manufacturer" form:"Manufacturer"`       // Manufacturer name

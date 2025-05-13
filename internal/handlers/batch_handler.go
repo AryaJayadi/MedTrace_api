@@ -17,7 +17,7 @@ func NewBatchHandler(service *services.BatchService) *BatchHandler {
 }
 
 func (h *BatchHandler) CreateBatch(c echo.Context) error {
-	var req batch.BatchCreate
+	var req batch.CreateBatch
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 	}
