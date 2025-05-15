@@ -17,6 +17,23 @@ func NewOrganizationService(contract *client.Contract) *OrganizationService {
 	return &OrganizationService{contract: contract}
 }
 
+func (s *OrganizationService) GetOrganizationByID(ctx context.Context, orgID string) response.BaseValueResponse[entity.Organization] {
+	resultBytes, err := s.contract.EvaluateTransaction("GetOrganization", orgID)
+	if err != nil {
+		return response.ErrorValueResponse[entity.Organization](500, "Failed to evaluate GetOrganization transaction: %v", err)
+	}
+	if len(resultBytes) == 0 {
+		return response.ErrorValueResponse[entity.Organization](404, "Organization %s not found", orgID)
+	}
+
+	var org entity.Organization
+	err = json.Unmarshal(resultBytes, &org)
+	if err != nil {
+		return response.ErrorValueResponse[entity.Organization](500, "Failed to unmarshal organization data: %v", err)
+	}
+	return response.SuccessValueResponse(org)
+}
+
 func (s *OrganizationService) GetOrganizations(ctx context.Context) response.BaseListResponse[entity.Organization] {
 	resp, err := s.contract.EvaluateTransaction("GetAllOrganizations")
 	if err != nil {

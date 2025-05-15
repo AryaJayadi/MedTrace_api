@@ -57,14 +57,43 @@ func main() {
 
 	organizationService := services.NewOrganizationService(contract)
 	batchService := services.NewBatchService(contract)
+	drugService := services.NewDrugService(contract)
+	transferService := services.NewTransferService(contract)
+	ledgerService := services.NewLedgerService(contract)
 
 	organizationHandler := handlers.NewOrganizationHandler(organizationService)
 	batchHandler := handlers.NewBatchHandler(batchService)
+	drugHandler := handlers.NewDrugHandler(drugService)
+	transferHandler := handlers.NewTransferHandler(transferService)
+	ledgerHandler := handlers.NewLedgerHandler(ledgerService)
 
-	e.GET("/organizations", organizationHandler.GetOrganizations)
-	e.POST("/batches", batchHandler.CreateBatch)
-	e.GET("/batches", batchHandler.GetAllBatches)
-	e.PATCH("/batches", batchHandler.UpdateBatch)
+	orgGroup := e.Group("/organizations")
+	orgGroup.GET("", organizationHandler.GetOrganizations)
+	orgGroup.GET("/:id", organizationHandler.GetOrganizationByID)
+
+	batchesGroup := e.Group("/batches")
+	batchesGroup.POST("", batchHandler.CreateBatch)
+	batchesGroup.GET("", batchHandler.GetAllBatches)
+	batchesGroup.GET("/:id/exists", batchHandler.BatchExists)
+	batchesGroup.GET("/:id", batchHandler.GetBatchByID)
+	batchesGroup.PATCH("/batches", batchHandler.UpdateBatch)
+
+	ledgerGroup := e.Group("/ledger")
+	ledgerGroup.POST("/init", ledgerHandler.InitLedger)
+
+	drugsGroup := e.Group("/drugs")
+	drugsGroup.POST("", drugHandler.CreateDrug)
+	drugsGroup.GET("/my", drugHandler.GetMyDrugs)
+	drugsGroup.GET("/:drugID", drugHandler.GetDrug)
+
+	transferGroup := e.Group("/transfers")
+	transferGroup.POST("", transferHandler.CreateTransfer)
+	transferGroup.GET("/my", transferHandler.GetMyTransfers)
+	transferGroup.GET("/my/outgoing", transferHandler.GetMyOutTransfer)
+	transferGroup.GET("/my/incoming", transferHandler.GetMyInTransfer)
+	transferGroup.POST("/accept", transferHandler.AcceptTransfer)
+	transferGroup.POST("/reject", transferHandler.RejectTransfer)
+	transferGroup.GET("/:id", transferHandler.GetTransfer)
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
