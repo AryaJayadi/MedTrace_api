@@ -89,6 +89,7 @@ func main() {
 	drugsGroup.POST("", drugHandler.CreateDrug)
 	drugsGroup.GET("/my", drugHandler.GetMyDrugs)
 	drugsGroup.GET("/:drugID", drugHandler.GetDrug)
+	drugsGroup.GET("/batch/:batchID", drugHandler.GetDrugByBatch)
 
 	transferGroup := e.Group("/transfers")
 	transferGroup.POST("", transferHandler.CreateTransfer)

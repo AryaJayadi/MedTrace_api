@@ -98,3 +98,30 @@ func (h *DrugHandler) GetMyDrugs(c echo.Context) error {
 	}
 	return c.JSON(status, resp)
 }
+
+// GetDrugByBatch godoc
+// @Summary Get drugs by batch ID
+// @Description Retrieve all drug assets associated with a specific batch ID from the ledger
+// @Tags drugs
+// @Produce json
+// @Param batchID path string true "Batch ID"
+// @Success 200 {object} response.BaseListResponse[entity.Drug]
+// @Failure 400 {object} response.BaseResponse "{ \"error\": \"Bad Request\" }"
+// @Failure 500 {object} response.BaseResponse "{ \"error\": \"Internal Server Error\" }"
+// @Router /drugs/batch/{batchID} [get]
+func (h *DrugHandler) GetDrugByBatch(c echo.Context) error {
+	batchID := c.Param("batchID")
+	if batchID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusBadRequest, "message": "Batch ID parameter is required"}})
+	}
+
+	resp := h.Service.GetDrugByBatch(c.Request().Context(), batchID)
+	status := http.StatusOK
+	if !resp.Success {
+		status = resp.Error.Code
+		if status == 0 {
+			status = http.StatusInternalServerError
+		}
+	}
+	return c.JSON(status, resp)
+}
