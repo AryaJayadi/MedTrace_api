@@ -22,6 +22,9 @@ func ErrorValueResponse[T any](code int, format string, args ...any) BaseValueRe
 }
 
 func SuccessListResponse[T any](list []*T) BaseListResponse[T] {
+	if list == nil {
+		list = make([]*T, 0)
+	}
 	return BaseListResponse[T]{
 		Success: true,
 		List:    list,

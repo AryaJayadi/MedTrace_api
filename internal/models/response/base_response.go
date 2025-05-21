@@ -13,6 +13,6 @@ type BaseValueResponse[T any] struct {
 
 type BaseListResponse[T any] struct {
 	Success bool       `json:"success"`
-	List    []*T       `json:"list,omitempty"`
+	List    []*T       `json:"list"`
 	Error   *ErrorInfo `json:"error,omitempty"`
 }
