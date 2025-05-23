@@ -96,3 +96,24 @@ func (s *DrugService) GetDrugByBatch(ctx context.Context, batchID string) respon
 
 	return response.SuccessListResponse(drugsPtrs)
 }
+
+// GetMyAvailDrugs calls the GetMyAvailDrugs chaincode function
+func (s *DrugService) GetMyAvailDrugs(ctx context.Context) response.BaseListResponse[entity.Drug] {
+	resultBytes, err := s.contract.EvaluateTransaction("GetMyAvailDrugs")
+	if err != nil {
+		return response.ErrorListResponse[entity.Drug](500, "Failed to evaluate GetMyAvailDrugs transaction: %v", err)
+	}
+
+	var drugs []entity.Drug
+	err = json.Unmarshal(resultBytes, &drugs)
+	if err != nil {
+		return response.ErrorListResponse[entity.Drug](500, "Failed to unmarshal drugs data for GetMyAvailDrugs: %v", err)
+	}
+
+	drugsPtrs := make([]*entity.Drug, len(drugs))
+	for i := range drugs {
+		drugsPtrs[i] = &drugs[i]
+	}
+
+	return response.SuccessListResponse(drugsPtrs)
+}

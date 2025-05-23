@@ -125,3 +125,23 @@ func (h *DrugHandler) GetDrugByBatch(c echo.Context) error {
 	}
 	return c.JSON(status, resp)
 }
+
+// GetMyAvailDrugs godoc
+// @Summary Get available drugs owned by the caller
+// @Description Retrieve all drug assets owned by the transaction submitter that are not currently in a pending transfer.
+// @Tags drugs
+// @Produce json
+// @Success 200 {object} response.BaseListResponse[entity.Drug]
+// @Failure 500 {object} response.BaseResponse "{ \"error\": \"Internal Server Error\" }"
+// @Router /drugs/my/available [get]
+func (h *DrugHandler) GetMyAvailDrugs(c echo.Context) error {
+	resp := h.Service.GetMyAvailDrugs(c.Request().Context())
+	status := http.StatusOK
+	if !resp.Success {
+		status = resp.Error.Code
+		if status == 0 {
+			status = http.StatusInternalServerError
+		}
+	}
+	return c.JSON(status, resp)
+}
