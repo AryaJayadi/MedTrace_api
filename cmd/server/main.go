@@ -15,8 +15,6 @@ import (
 )
 
 func main() {
-	// Load .env file. It's good practice to log if it fails but not necessarily fatal
-	// as environment variables can be set directly in the environment.
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Info: Error loading .env file (this is not fatal if environment variables are set directly):", err)
@@ -31,11 +29,8 @@ func main() {
 	allowedOriginsEnv := os.Getenv("ALLOWED_ORIGINS")
 	var allowedOrigins []string
 	if allowedOriginsEnv != "" {
-		// Simple split by comma, you might want more robust parsing for production
-		// For example, handling spaces around commas: strings.Split(strings.ReplaceAll(allowedOriginsEnv, " ", ""), ",")
 		allowedOrigins = append(allowedOrigins, strings.Split(allowedOriginsEnv, ",")...)
 	} else {
-		// Default if not set in .env
 		allowedOrigins = []string{"http://localhost:5173"}
 		log.Println("ALLOWED_ORIGINS not set in environment, using default:", allowedOrigins)
 	}

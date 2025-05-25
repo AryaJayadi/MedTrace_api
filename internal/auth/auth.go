@@ -87,7 +87,6 @@ func AuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 			return jwtSecret, nil
 		})
-
 		if err != nil {
 			return echo.NewHTTPError(http.StatusUnauthorized, fmt.Sprintf("Invalid JWT: %s", err.Error()))
 		}
@@ -148,7 +147,13 @@ func GetContractFromContext(c echo.Context) (*client.Contract, error) {
 
 // LoginPayload defines the expected JSON structure for the login request.
 type LoginPayload struct {
-	OrgID string `json:"orgId" validate:"required"`
+	Organization string `json:"organization" validate:"required"`
+	Password     string `json:"password" validate:"required"`
+}
+
+func validateOrgAndPassword(org, password string) bool {
+	expectedPassword := org + "asdf"
+	return password == expectedPassword
 }
 
 // LoginHandler handles the /login endpoint.
@@ -158,17 +163,23 @@ func LoginHandler(c echo.Context) error {
 	if err := c.Bind(payload); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request payload: "+err.Error())
 	}
-	if payload.OrgID == "" {
+	if payload.Organization == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "orgId is required")
+	}
+	if payload.Password == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Password is required")
+	}
+	if !validateOrgAndPassword(payload.Organization, payload.Password) {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Invalid organization or password")
 	}
 
 	// GenerateJWT already validates OrgID by calling config.GetOrgConfig
-	token, err := GenerateJWT(payload.OrgID)
+	token, err := GenerateJWT(payload.Organization)
 	if err != nil {
-		c.Logger().Errorf("LoginHandler: Failed to generate JWT for OrgID '%s': %v", payload.OrgID, err)
+		c.Logger().Errorf("LoginHandler: Failed to generate JWT for OrgID '%s': %v", payload.Organization, err)
 		// Check if the error is due to invalid org, then return 400, otherwise 500.
 		if strings.Contains(err.Error(), "cannot generate token for invalid organization") {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid organization ID: %s", payload.OrgID))
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid organization ID: %s", payload.Organization))
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, "Login failed: could not generate authentication token.")
 	}
@@ -176,7 +187,7 @@ func LoginHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "Login successful",
 		"token":   token,
-		"orgId":   payload.OrgID,
+		"orgId":   payload.Organization,
 	})
 }
 
