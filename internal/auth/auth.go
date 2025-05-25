@@ -9,6 +9,8 @@ import (
 
 	"github.com/AryaJayadi/MedTrace_api/cmd/fabric"
 	"github.com/AryaJayadi/MedTrace_api/internal/config"
+	"github.com/AryaJayadi/MedTrace_api/internal/models/dto/auth"
+	"github.com/AryaJayadi/MedTrace_api/internal/models/entity"
 	"github.com/AryaJayadi/MedTrace_api/internal/models/response"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hyperledger/fabric-gateway/pkg/client"
@@ -146,55 +148,37 @@ func GetContractFromContext(c echo.Context) (*client.Contract, error) {
 	return contract, nil
 }
 
-// LoginPayload defines the expected JSON structure for the login request.
-type LoginPayload struct {
-	Organization string `json:"organization" validate:"required"`
-	Password     string `json:"password" validate:"required"`
-}
-
 func validateOrgAndPassword(org, password string) bool {
 	expectedPassword := org + "asdf"
 	return password == expectedPassword
 }
 
-// LoginResponseData defines the structure for successful login response value
-type LoginResponseData struct {
-	Token   string `json:"token"`
-	OrgID   string `json:"orgId"`
-	Message string `json:"message"`
-}
-
-// LogoutResponseData defines the structure for successful logout response value
-type LogoutResponseData struct {
-	Message string `json:"message"`
-}
-
 // LoginHandler handles the /login endpoint.
 func LoginHandler(c echo.Context) error {
-	payload := new(LoginPayload)
+	payload := new(auth.PayloadLogin)
 	if err := c.Bind(payload); err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorValueResponse[LoginResponseData](http.StatusBadRequest, "Invalid request payload: %v", err))
+		return c.JSON(http.StatusBadRequest, response.ErrorValueResponse[entity.LoginResponseData](http.StatusBadRequest, "Invalid request payload: %v", err))
 	}
 	if payload.Organization == "" {
-		return c.JSON(http.StatusBadRequest, response.ErrorValueResponse[LoginResponseData](http.StatusBadRequest, "organization is required"))
+		return c.JSON(http.StatusBadRequest, response.ErrorValueResponse[entity.LoginResponseData](http.StatusBadRequest, "organization is required"))
 	}
 	if payload.Password == "" {
-		return c.JSON(http.StatusBadRequest, response.ErrorValueResponse[LoginResponseData](http.StatusBadRequest, "Password is required"))
+		return c.JSON(http.StatusBadRequest, response.ErrorValueResponse[entity.LoginResponseData](http.StatusBadRequest, "Password is required"))
 	}
 	if !validateOrgAndPassword(payload.Organization, payload.Password) {
-		return c.JSON(http.StatusUnauthorized, response.ErrorValueResponse[LoginResponseData](http.StatusUnauthorized, "Invalid organization or password"))
+		return c.JSON(http.StatusUnauthorized, response.ErrorValueResponse[entity.LoginResponseData](http.StatusUnauthorized, "Invalid organization or password"))
 	}
 
 	token, err := GenerateJWT(payload.Organization)
 	if err != nil {
 		c.Logger().Errorf("LoginHandler: Failed to generate JWT for OrgID '%s': %v", payload.Organization, err)
 		if strings.Contains(err.Error(), "cannot generate token for invalid organization") {
-			return c.JSON(http.StatusBadRequest, response.ErrorValueResponse[LoginResponseData](http.StatusBadRequest, "Invalid organization ID: %s", payload.Organization))
+			return c.JSON(http.StatusBadRequest, response.ErrorValueResponse[entity.LoginResponseData](http.StatusBadRequest, "Invalid organization ID: %s", payload.Organization))
 		}
-		return c.JSON(http.StatusInternalServerError, response.ErrorValueResponse[LoginResponseData](http.StatusInternalServerError, "Login failed: could not generate authentication token."))
+		return c.JSON(http.StatusInternalServerError, response.ErrorValueResponse[entity.LoginResponseData](http.StatusInternalServerError, "Login failed: could not generate authentication token."))
 	}
 
-	responseData := LoginResponseData{
+	responseData := entity.LoginResponseData{
 		Message: "Login successful",
 		Token:   token,
 		OrgID:   payload.Organization,
@@ -204,7 +188,7 @@ func LoginHandler(c echo.Context) error {
 
 // LogoutHandler handles the /logout endpoint.
 func LogoutHandler(c echo.Context) error {
-	responseData := LogoutResponseData{
+	responseData := entity.LogoutResponseData{
 		Message: "Logout successful. Please ensure the token is removed from client-side storage.",
 	}
 	return c.JSON(http.StatusOK, response.SuccessValueResponse(responseData))
