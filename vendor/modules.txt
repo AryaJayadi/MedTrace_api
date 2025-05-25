@@ -1,3 +1,6 @@
+# github.com/golang-jwt/jwt/v5 v5.2.2
+## explicit; go 1.18
+github.com/golang-jwt/jwt/v5
 # github.com/hyperledger/fabric-gateway v1.7.1
 ## explicit; go 1.22.0
 github.com/hyperledger/fabric-gateway/pkg/client
