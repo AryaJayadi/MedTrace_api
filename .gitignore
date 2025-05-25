@@ -21,3 +21,4 @@
 go.work
 cmd/server/.env
 cmd/server/.env
+.env
