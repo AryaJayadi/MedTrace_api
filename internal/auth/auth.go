@@ -9,6 +9,7 @@ import (
 
 	"github.com/AryaJayadi/MedTrace_api/cmd/fabric"
 	"github.com/AryaJayadi/MedTrace_api/internal/config"
+	"github.com/AryaJayadi/MedTrace_api/internal/models/response"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 	"github.com/labstack/echo/v4"
@@ -156,48 +157,55 @@ func validateOrgAndPassword(org, password string) bool {
 	return password == expectedPassword
 }
 
+// LoginResponseData defines the structure for successful login response value
+type LoginResponseData struct {
+	Token   string `json:"token"`
+	OrgID   string `json:"orgId"`
+	Message string `json:"message"`
+}
+
+// LogoutResponseData defines the structure for successful logout response value
+type LogoutResponseData struct {
+	Message string `json:"message"`
+}
+
 // LoginHandler handles the /login endpoint.
-// It expects a JSON payload with "orgId" (e.g., "Org1", "Org2").
 func LoginHandler(c echo.Context) error {
 	payload := new(LoginPayload)
 	if err := c.Bind(payload); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request payload: "+err.Error())
+		return c.JSON(http.StatusBadRequest, response.ErrorValueResponse[LoginResponseData](http.StatusBadRequest, "Invalid request payload: %v", err))
 	}
 	if payload.Organization == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "orgId is required")
+		return c.JSON(http.StatusBadRequest, response.ErrorValueResponse[LoginResponseData](http.StatusBadRequest, "organization is required"))
 	}
 	if payload.Password == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Password is required")
+		return c.JSON(http.StatusBadRequest, response.ErrorValueResponse[LoginResponseData](http.StatusBadRequest, "Password is required"))
 	}
 	if !validateOrgAndPassword(payload.Organization, payload.Password) {
-		return echo.NewHTTPError(http.StatusUnauthorized, "Invalid organization or password")
+		return c.JSON(http.StatusUnauthorized, response.ErrorValueResponse[LoginResponseData](http.StatusUnauthorized, "Invalid organization or password"))
 	}
 
-	// GenerateJWT already validates OrgID by calling config.GetOrgConfig
 	token, err := GenerateJWT(payload.Organization)
 	if err != nil {
 		c.Logger().Errorf("LoginHandler: Failed to generate JWT for OrgID '%s': %v", payload.Organization, err)
-		// Check if the error is due to invalid org, then return 400, otherwise 500.
 		if strings.Contains(err.Error(), "cannot generate token for invalid organization") {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid organization ID: %s", payload.Organization))
+			return c.JSON(http.StatusBadRequest, response.ErrorValueResponse[LoginResponseData](http.StatusBadRequest, "Invalid organization ID: %s", payload.Organization))
 		}
-		return echo.NewHTTPError(http.StatusInternalServerError, "Login failed: could not generate authentication token.")
+		return c.JSON(http.StatusInternalServerError, response.ErrorValueResponse[LoginResponseData](http.StatusInternalServerError, "Login failed: could not generate authentication token."))
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{
-		"message": "Login successful",
-		"token":   token,
-		"orgId":   payload.Organization,
-	})
+	responseData := LoginResponseData{
+		Message: "Login successful",
+		Token:   token,
+		OrgID:   payload.Organization,
+	}
+	return c.JSON(http.StatusOK, response.SuccessValueResponse(responseData))
 }
 
 // LogoutHandler handles the /logout endpoint.
-// For stateless JWTs, logout is primarily a client-side action (deleting the token).
-// This handler is mostly a placeholder. Server-side token blocklisting is not implemented here.
 func LogoutHandler(c echo.Context) error {
-	// If implementing a server-side token blacklist, this is where you'd add the token.
-	// For now, it's a simple acknowledgement.
-	return c.JSON(http.StatusOK, echo.Map{
-		"message": "Logout successful. Please ensure the token is removed from client-side storage.",
-	})
+	responseData := LogoutResponseData{
+		Message: "Logout successful. Please ensure the token is removed from client-side storage.",
+	}
+	return c.JSON(http.StatusOK, response.SuccessValueResponse(responseData))
 }
