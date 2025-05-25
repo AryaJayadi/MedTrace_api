@@ -3,38 +3,57 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
-	// "github.com/AryaJayadi/MedTrace_api/cmd/fabric" // No longer directly used for global setup
 	"github.com/AryaJayadi/MedTrace_api/internal/auth"
 	"github.com/AryaJayadi/MedTrace_api/internal/handlers"
 	"github.com/AryaJayadi/MedTrace_api/internal/services"
 
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
-// Global constants for Fabric setup are removed, as this is now dynamic.
-
 func main() {
+	// Load .env file. It's good practice to log if it fails but not necessarily fatal
+	// as environment variables can be set directly in the environment.
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Info: Error loading .env file (this is not fatal if environment variables are set directly):", err)
+	} else {
+		log.Println("Successfully loaded .env file")
+	}
+
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+
+	allowedOriginsEnv := os.Getenv("ALLOWED_ORIGINS")
+	var allowedOrigins []string
+	if allowedOriginsEnv != "" {
+		// Simple split by comma, you might want more robust parsing for production
+		// For example, handling spaces around commas: strings.Split(strings.ReplaceAll(allowedOriginsEnv, " ", ""), ",")
+		allowedOrigins = append(allowedOrigins, strings.Split(allowedOriginsEnv, ",")...)
+	} else {
+		// Default if not set in .env
+		allowedOrigins = []string{"http://localhost:5173"}
+		log.Println("ALLOWED_ORIGINS not set in environment, using default:", allowedOrigins)
+	}
+
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"http://localhost:5173"},                                                                // Consider making this configurable
-		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization}, // Added Authorization for JWT
+		AllowOrigins: allowedOrigins,
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 	}))
 
-	// Removed global Fabric initialization: orgConfig, orgSetup, network, contract
-
-	// Chaincode and Channel names can still be read from ENV or use defaults from auth package
-	// This is handled within AuthMiddleware now, but good to be aware.
 	chaincodeName := os.Getenv("CHAINCODE_NAME")
 	if chaincodeName == "" {
+		log.Println("CHAINCODE_NAME not set in environment, using default from auth package.")
 		chaincodeName = auth.DefaultChaincodeName
 	}
 
 	channelName := os.Getenv("CHANNEL_NAME")
 	if channelName == "" {
+		log.Println("CHANNEL_NAME not set in environment, using default from auth package.")
 		channelName = auth.DefaultChannelName
 	}
 	log.Printf("Using Chaincode: %s, Channel: %s", chaincodeName, channelName)
@@ -92,7 +111,9 @@ func main() {
 
 	port := os.Getenv("API_PORT")
 	if port == "" {
+		log.Println("API_PORT not set in environment, using default 8080")
 		port = "8080"
 	}
+	log.Printf("Starting server on port %s", port)
 	e.Logger.Fatal(e.Start(":" + port))
 }

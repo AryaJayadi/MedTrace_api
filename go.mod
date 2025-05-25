@@ -7,6 +7,7 @@ replace github.com/AryaJayadi/MedTrace_chaincode => ../MedTrace_chaincode
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/hyperledger/fabric-gateway v1.7.1
+	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.13.3
 	google.golang.org/grpc v1.71.0
 )
