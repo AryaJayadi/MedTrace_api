@@ -10,25 +10,26 @@ import (
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 )
 
-// TransferService handles transfer-related operations
+// TransferService handles transfer-related operations.
+// It no longer stores the contract directly.
 type TransferService struct {
-	contract *client.Contract
+	// No contract field here
 }
 
-// NewTransferService creates a new TransferService
-func NewTransferService(contract *client.Contract) *TransferService {
-	return &TransferService{contract: contract}
+// NewTransferService creates a new TransferService.
+// It no longer takes a contract as a parameter.
+func NewTransferService() *TransferService {
+	return &TransferService{}
 }
 
-// CreateTransfer calls the CreateTransfer chaincode function
-func (s *TransferService) CreateTransfer(ctx context.Context, req *transfer.CreateTransferRequest) response.BaseValueResponse[entity.Transfer] {
-	// Directly marshal the API DTO. Its JSON tags are now set to match chaincode expectations.
+// CreateTransfer calls the CreateTransfer chaincode function using the provided contract.
+func (s *TransferService) CreateTransfer(contract *client.Contract, ctx context.Context, req *transfer.CreateTransferRequest) response.BaseValueResponse[entity.Transfer] {
 	ccReqJSON, err := json.Marshal(req)
 	if err != nil {
 		return response.ErrorValueResponse[entity.Transfer](500, "Failed to marshal CreateTransfer request: %v", err)
 	}
 
-	resultBytes, err := s.contract.SubmitTransaction("CreateTransfer", string(ccReqJSON))
+	resultBytes, err := contract.SubmitTransaction("CreateTransfer", string(ccReqJSON))
 	if err != nil {
 		return response.ErrorValueResponse[entity.Transfer](500, "Failed to submit CreateTransfer transaction: %v", err)
 	}
@@ -41,9 +42,9 @@ func (s *TransferService) CreateTransfer(ctx context.Context, req *transfer.Crea
 	return response.SuccessValueResponse(transferEntity)
 }
 
-// GetTransfer calls the GetTransfer chaincode function
-func (s *TransferService) GetTransfer(ctx context.Context, transferID string) response.BaseValueResponse[entity.Transfer] {
-	resultBytes, err := s.contract.EvaluateTransaction("GetTransfer", transferID)
+// GetTransfer calls the GetTransfer chaincode function using the provided contract.
+func (s *TransferService) GetTransfer(contract *client.Contract, ctx context.Context, transferID string) response.BaseValueResponse[entity.Transfer] {
+	resultBytes, err := contract.EvaluateTransaction("GetTransfer", transferID)
 	if err != nil {
 		return response.ErrorValueResponse[entity.Transfer](500, "Failed to evaluate GetTransfer transaction: %v", err)
 	}
@@ -59,9 +60,9 @@ func (s *TransferService) GetTransfer(ctx context.Context, transferID string) re
 	return response.SuccessValueResponse(transferEntity)
 }
 
-// generic helper for GetMy...Transfer functions
-func (s *TransferService) getMyTransfersByType(ctx context.Context, chaincodeFunc string) response.BaseListResponse[entity.Transfer] {
-	resultBytes, err := s.contract.EvaluateTransaction(chaincodeFunc)
+// getMyTransfersByType is a generic helper for GetMy...Transfer functions using the provided contract.
+func (s *TransferService) getMyTransfersByType(contract *client.Contract, ctx context.Context, chaincodeFunc string) response.BaseListResponse[entity.Transfer] {
+	resultBytes, err := contract.EvaluateTransaction(chaincodeFunc)
 	if err != nil {
 		return response.ErrorListResponse[entity.Transfer](500, "Failed to evaluate %s transaction: %v", chaincodeFunc, err)
 	}
@@ -79,30 +80,29 @@ func (s *TransferService) getMyTransfersByType(ctx context.Context, chaincodeFun
 	return response.SuccessListResponse(transfersPtrs)
 }
 
-// GetMyOutTransfer calls the GetMyOutTransfer chaincode function
-func (s *TransferService) GetMyOutTransfer(ctx context.Context) response.BaseListResponse[entity.Transfer] {
-	return s.getMyTransfersByType(ctx, "GetMyOutTransfer")
+// GetMyOutTransfer calls the GetMyOutTransfer chaincode function using the provided contract.
+func (s *TransferService) GetMyOutTransfer(contract *client.Contract, ctx context.Context) response.BaseListResponse[entity.Transfer] {
+	return s.getMyTransfersByType(contract, ctx, "GetMyOutTransfer")
 }
 
-// GetMyInTransfer calls the GetMyInTransfer chaincode function
-func (s *TransferService) GetMyInTransfer(ctx context.Context) response.BaseListResponse[entity.Transfer] {
-	return s.getMyTransfersByType(ctx, "GetMyInTransfer")
+// GetMyInTransfer calls the GetMyInTransfer chaincode function using the provided contract.
+func (s *TransferService) GetMyInTransfer(contract *client.Contract, ctx context.Context) response.BaseListResponse[entity.Transfer] {
+	return s.getMyTransfersByType(contract, ctx, "GetMyInTransfer")
 }
 
-// GetMyTransfers calls the GetMyTransfers chaincode function (all for the user)
-func (s *TransferService) GetMyTransfers(ctx context.Context) response.BaseListResponse[entity.Transfer] {
-	return s.getMyTransfersByType(ctx, "GetMyTransfers")
+// GetMyTransfers calls the GetMyTransfers chaincode function (all for the user) using the provided contract.
+func (s *TransferService) GetMyTransfers(contract *client.Contract, ctx context.Context) response.BaseListResponse[entity.Transfer] {
+	return s.getMyTransfersByType(contract, ctx, "GetMyTransfers")
 }
 
-// AcceptTransfer calls the AcceptTransfer chaincode function
-func (s *TransferService) AcceptTransfer(ctx context.Context, req *transfer.ProcessTransferRequest) response.BaseValueResponse[entity.Transfer] {
-	// Directly marshal the API DTO. Its JSON tags are now set to match chaincode expectations.
+// AcceptTransfer calls the AcceptTransfer chaincode function using the provided contract.
+func (s *TransferService) AcceptTransfer(contract *client.Contract, ctx context.Context, req *transfer.ProcessTransferRequest) response.BaseValueResponse[entity.Transfer] {
 	ccReqJSON, err := json.Marshal(req)
 	if err != nil {
 		return response.ErrorValueResponse[entity.Transfer](500, "Failed to marshal AcceptTransfer request: %v", err)
 	}
 
-	resultBytes, err := s.contract.SubmitTransaction("AcceptTransfer", string(ccReqJSON))
+	resultBytes, err := contract.SubmitTransaction("AcceptTransfer", string(ccReqJSON))
 	if err != nil {
 		return response.ErrorValueResponse[entity.Transfer](500, "Failed to submit AcceptTransfer transaction: %v", err)
 	}
@@ -115,15 +115,14 @@ func (s *TransferService) AcceptTransfer(ctx context.Context, req *transfer.Proc
 	return response.SuccessValueResponse(transferEntity)
 }
 
-// RejectTransfer calls the RejectTransfer chaincode function
-func (s *TransferService) RejectTransfer(ctx context.Context, req *transfer.ProcessTransferRequest) response.BaseValueResponse[entity.Transfer] {
-	// Directly marshal the API DTO. Its JSON tags are now set to match chaincode expectations.
+// RejectTransfer calls the RejectTransfer chaincode function using the provided contract.
+func (s *TransferService) RejectTransfer(contract *client.Contract, ctx context.Context, req *transfer.ProcessTransferRequest) response.BaseValueResponse[entity.Transfer] {
 	ccReqJSON, err := json.Marshal(req)
 	if err != nil {
 		return response.ErrorValueResponse[entity.Transfer](500, "Failed to marshal RejectTransfer request: %v", err)
 	}
 
-	resultBytes, err := s.contract.SubmitTransaction("RejectTransfer", string(ccReqJSON))
+	resultBytes, err := contract.SubmitTransaction("RejectTransfer", string(ccReqJSON))
 	if err != nil {
 		return response.ErrorValueResponse[entity.Transfer](500, "Failed to submit RejectTransfer transaction: %v", err)
 	}

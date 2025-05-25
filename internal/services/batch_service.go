@@ -10,35 +10,41 @@ import (
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 )
 
+// BatchService handles business logic for batches.
+// It no longer stores the contract directly.
 type BatchService struct {
-	contract *client.Contract
+	// No contract field here
 }
 
-func NewBatchService(contract *client.Contract) *BatchService {
-	return &BatchService{contract: contract}
+// NewBatchService creates a new BatchService.
+// It no longer takes a contract as a parameter.
+func NewBatchService() *BatchService {
+	return &BatchService{}
 }
 
-func (s *BatchService) CreateBatch(ctx context.Context, req *batch.CreateBatch) response.BaseValueResponse[entity.Batch] {
+// CreateBatch creates a new batch on the ledger using the provided contract.
+func (s *BatchService) CreateBatch(contract *client.Contract, ctx context.Context, req *batch.CreateBatch) response.BaseValueResponse[entity.Batch] {
 	reqJSON, err := json.Marshal(req)
 	if err != nil {
 		return response.ErrorValueResponse[entity.Batch](500, "Failed to marshal request: %v", err)
 	}
 
-	resp, err := s.contract.SubmitTransaction("CreateBatch", string(reqJSON))
+	resp, err := contract.SubmitTransaction("CreateBatch", string(reqJSON))
 	if err != nil {
 		return response.ErrorValueResponse[entity.Batch](500, "Failed to submit transaction to Fabric: %v", err)
 	}
 
-	var batch entity.Batch
-	if err := json.Unmarshal(resp, &batch); err != nil {
+	var batchEntity entity.Batch // Renamed to avoid conflict with package name
+	if err := json.Unmarshal(resp, &batchEntity); err != nil {
 		return response.ErrorValueResponse[entity.Batch](500, "Failed to unmarshal Fabric response: %v", err)
 	}
 
-	return response.SuccessValueResponse(batch)
+	return response.SuccessValueResponse(batchEntity)
 }
 
-func (s *BatchService) GetAllBatches(ctx context.Context) response.BaseListResponse[entity.Batch] {
-	resp, err := s.contract.EvaluateTransaction("GetAllBatches")
+// GetAllBatches retrieves all batches from the ledger using the provided contract.
+func (s *BatchService) GetAllBatches(contract *client.Contract, ctx context.Context) response.BaseListResponse[entity.Batch] {
+	resp, err := contract.EvaluateTransaction("GetAllBatches")
 	if err != nil {
 		return response.ErrorListResponse[entity.Batch](500, "Failed to evaluate transaction: %v", err)
 	}
@@ -56,28 +62,29 @@ func (s *BatchService) GetAllBatches(ctx context.Context) response.BaseListRespo
 	return response.SuccessListResponse(ptrList)
 }
 
-func (s *BatchService) UpdateBatch(ctx context.Context, req *batch.UpdateBatch) response.BaseValueResponse[entity.Batch] {
+// UpdateBatch updates an existing batch on the ledger using the provided contract.
+func (s *BatchService) UpdateBatch(contract *client.Contract, ctx context.Context, req *batch.UpdateBatch) response.BaseValueResponse[entity.Batch] {
 	reqJSON, err := json.Marshal(req)
 	if err != nil {
 		return response.ErrorValueResponse[entity.Batch](500, "Failed to marshal request: %v", err)
 	}
 
-	resp, err := s.contract.SubmitTransaction("UpdateBatch", string(reqJSON))
+	resp, err := contract.SubmitTransaction("UpdateBatch", string(reqJSON))
 	if err != nil {
 		return response.ErrorValueResponse[entity.Batch](500, "Failed to submit transaction to Fabric: %v", err)
 	}
 
-	var batch entity.Batch
-	if err := json.Unmarshal(resp, &batch); err != nil {
+	var batchEntity entity.Batch // Renamed to avoid conflict
+	if err := json.Unmarshal(resp, &batchEntity); err != nil {
 		return response.ErrorValueResponse[entity.Batch](500, "Failed to unmarshal Fabric response: %v", err)
 	}
 
-	return response.SuccessValueResponse(batch)
+	return response.SuccessValueResponse(batchEntity)
 }
 
-// GetBatchByID calls the GetBatch chaincode function
-func (s *BatchService) GetBatchByID(ctx context.Context, batchID string) response.BaseValueResponse[entity.Batch] {
-	resultBytes, err := s.contract.EvaluateTransaction("GetBatch", batchID)
+// GetBatchByID retrieves a specific batch by ID from the ledger using the provided contract.
+func (s *BatchService) GetBatchByID(contract *client.Contract, ctx context.Context, batchID string) response.BaseValueResponse[entity.Batch] {
+	resultBytes, err := contract.EvaluateTransaction("GetBatch", batchID)
 	if err != nil {
 		return response.ErrorValueResponse[entity.Batch](500, "Failed to evaluate GetBatch transaction: %v", err)
 	}
@@ -93,18 +100,15 @@ func (s *BatchService) GetBatchByID(ctx context.Context, batchID string) respons
 	return response.SuccessValueResponse(batchEntity)
 }
 
-// BatchExists calls the BatchExists chaincode function
-func (s *BatchService) BatchExists(ctx context.Context, batchID string) response.BaseValueResponse[bool] {
-	resultBytes, err := s.contract.EvaluateTransaction("BatchExists", batchID)
+// BatchExists checks if a batch exists on the ledger using the provided contract.
+func (s *BatchService) BatchExists(contract *client.Contract, ctx context.Context, batchID string) response.BaseValueResponse[bool] {
+	resultBytes, err := contract.EvaluateTransaction("BatchExists", batchID)
 	if err != nil {
 		return response.ErrorValueResponse[bool](500, "Failed to evaluate BatchExists transaction: %v", err)
 	}
-	// The chaincode BatchExists returns a boolean marshalled as JSON string (e.g., "true" or "false")
 	var exists bool
 	err = json.Unmarshal(resultBytes, &exists)
 	if err != nil {
-		// It's possible resultBytes is not a valid JSON bool, e.g. empty if record doesn't exist and CC returns nothing
-		// Or if chaincode returns non-JSON string. For safety, treat unmarshal error as not found or error.
 		return response.ErrorValueResponse[bool](500, "Failed to unmarshal BatchExists result: %v. Raw: %s", err, string(resultBytes))
 	}
 	return response.SuccessValueResponse(exists)

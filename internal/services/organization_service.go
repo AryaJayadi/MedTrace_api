@@ -9,16 +9,21 @@ import (
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 )
 
+// OrganizationService handles business logic for organizations.
+// It no longer stores the contract directly.
 type OrganizationService struct {
-	contract *client.Contract
+	// No contract field here
 }
 
-func NewOrganizationService(contract *client.Contract) *OrganizationService {
-	return &OrganizationService{contract: contract}
+// NewOrganizationService creates a new OrganizationService.
+// It no longer takes a contract as a parameter.
+func NewOrganizationService() *OrganizationService {
+	return &OrganizationService{}
 }
 
-func (s *OrganizationService) GetOrganizationByID(ctx context.Context, orgID string) response.BaseValueResponse[entity.Organization] {
-	resultBytes, err := s.contract.EvaluateTransaction("GetOrganization", orgID)
+// GetOrganizationByID retrieves a specific organization from the ledger using the provided contract.
+func (s *OrganizationService) GetOrganizationByID(contract *client.Contract, ctx context.Context, orgID string) response.BaseValueResponse[entity.Organization] {
+	resultBytes, err := contract.EvaluateTransaction("GetOrganization", orgID)
 	if err != nil {
 		return response.ErrorValueResponse[entity.Organization](500, "Failed to evaluate GetOrganization transaction: %v", err)
 	}
@@ -34,8 +39,9 @@ func (s *OrganizationService) GetOrganizationByID(ctx context.Context, orgID str
 	return response.SuccessValueResponse(org)
 }
 
-func (s *OrganizationService) GetOrganizations(ctx context.Context) response.BaseListResponse[entity.Organization] {
-	resp, err := s.contract.EvaluateTransaction("GetAllOrganizations")
+// GetOrganizations retrieves all organizations from the ledger using the provided contract.
+func (s *OrganizationService) GetOrganizations(contract *client.Contract, ctx context.Context) response.BaseListResponse[entity.Organization] {
+	resp, err := contract.EvaluateTransaction("GetAllOrganizations")
 	if err != nil {
 		return response.ErrorListResponse[entity.Organization](500, "Failed to evaluate transaction to Fabric: %v", err)
 	}

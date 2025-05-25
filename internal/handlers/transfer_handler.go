@@ -4,7 +4,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/AryaJayadi/MedTrace_api/internal/auth"
 	"github.com/AryaJayadi/MedTrace_api/internal/models/dto/transfer"
+	"github.com/AryaJayadi/MedTrace_api/internal/models/entity"
 	"github.com/AryaJayadi/MedTrace_api/internal/models/response"
 	"github.com/AryaJayadi/MedTrace_api/internal/services"
 	"github.com/labstack/echo/v4"
@@ -52,23 +54,31 @@ func (h *TransferHandler) sendListResponse(c echo.Context, successStatus int, re
 // @Produce json
 // @Param transfer body transfer.CreateTransferRequest true "Transfer details. DrugsID and ReceiverID are required."
 // @Success 201 {object} response.BaseValueResponse[entity.Transfer]
-// @Failure 400 {object} response.BaseResponse
-// @Failure 500 {object} response.BaseResponse
+// @Failure 400 {object} response.BaseResponse "Invalid request payload or missing required fields"
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
 // @Router /transfers [post]
+// @Security BearerAuth
 func (h *TransferHandler) CreateTransfer(c echo.Context) error {
 	var req transfer.CreateTransferRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[any]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "Invalid request payload: " + err.Error()}})
+		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "Invalid request payload: " + err.Error()}})
 	}
 	if req.ReceiverID == "" || len(req.DrugsID) == 0 {
-		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[any]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "ReceiverID and at least one DrugID are required"}})
+		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "ReceiverID and at least one DrugID are required"}})
 	}
 	if req.TransferDate == nil {
 		now := time.Now()
 		req.TransferDate = &now
 	}
 
-	resp := h.Service.CreateTransfer(c.Request().Context(), &req)
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler CreateTransfer: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, response.BaseValueResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusInternalServerError, Message: "Failed to access network resources"}})
+	}
+
+	resp := h.Service.CreateTransfer(contract, c.Request().Context(), &req)
 	if resp.Success {
 		return c.JSON(http.StatusCreated, resp)
 	}
@@ -86,16 +96,25 @@ func (h *TransferHandler) CreateTransfer(c echo.Context) error {
 // @Produce json
 // @Param id path string true "Transfer ID"
 // @Success 200 {object} response.BaseValueResponse[entity.Transfer]
-// @Failure 400 {object} response.BaseResponse
-// @Failure 404 {object} response.BaseResponse
-// @Failure 500 {object} response.BaseResponse
+// @Failure 400 {object} response.BaseResponse "Invalid Transfer ID"
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 404 {object} response.BaseResponse "Transfer not found"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
 // @Router /transfers/{id} [get]
+// @Security BearerAuth
 func (h *TransferHandler) GetTransfer(c echo.Context) error {
 	transferID := c.Param("id")
 	if transferID == "" {
-		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[any]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "Transfer ID parameter is required"}})
+		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "Transfer ID parameter is required"}})
 	}
-	resp := h.Service.GetTransfer(c.Request().Context(), transferID)
+
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler GetTransfer: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, response.BaseValueResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusInternalServerError, Message: "Failed to access network resources"}})
+	}
+
+	resp := h.Service.GetTransfer(contract, c.Request().Context(), transferID)
 	if resp.Success {
 		return c.JSON(http.StatusOK, resp)
 	}
@@ -112,10 +131,18 @@ func (h *TransferHandler) GetTransfer(c echo.Context) error {
 // @Tags transfers
 // @Produce json
 // @Success 200 {object} response.BaseListResponse[entity.Transfer]
-// @Failure 500 {object} response.BaseResponse
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
 // @Router /transfers/my/outgoing [get]
+// @Security BearerAuth
 func (h *TransferHandler) GetMyOutTransfer(c echo.Context) error {
-	resp := h.Service.GetMyOutTransfer(c.Request().Context())
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler GetMyOutTransfer: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, response.BaseListResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusInternalServerError, Message: "Failed to access network resources"}})
+	}
+
+	resp := h.Service.GetMyOutTransfer(contract, c.Request().Context())
 	if resp.Success {
 		return c.JSON(http.StatusOK, resp)
 	}
@@ -132,10 +159,18 @@ func (h *TransferHandler) GetMyOutTransfer(c echo.Context) error {
 // @Tags transfers
 // @Produce json
 // @Success 200 {object} response.BaseListResponse[entity.Transfer]
-// @Failure 500 {object} response.BaseResponse
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
 // @Router /transfers/my/incoming [get]
+// @Security BearerAuth
 func (h *TransferHandler) GetMyInTransfer(c echo.Context) error {
-	resp := h.Service.GetMyInTransfer(c.Request().Context())
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler GetMyInTransfer: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, response.BaseListResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusInternalServerError, Message: "Failed to access network resources"}})
+	}
+
+	resp := h.Service.GetMyInTransfer(contract, c.Request().Context())
 	if resp.Success {
 		return c.JSON(http.StatusOK, resp)
 	}
@@ -152,10 +187,18 @@ func (h *TransferHandler) GetMyInTransfer(c echo.Context) error {
 // @Tags transfers
 // @Produce json
 // @Success 200 {object} response.BaseListResponse[entity.Transfer]
-// @Failure 500 {object} response.BaseResponse
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
 // @Router /transfers/my [get]
+// @Security BearerAuth
 func (h *TransferHandler) GetMyTransfers(c echo.Context) error {
-	resp := h.Service.GetMyTransfers(c.Request().Context())
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler GetMyTransfers: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, response.BaseListResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusInternalServerError, Message: "Failed to access network resources"}})
+	}
+
+	resp := h.Service.GetMyTransfers(contract, c.Request().Context())
 	if resp.Success {
 		return c.JSON(http.StatusOK, resp)
 	}
@@ -174,23 +217,31 @@ func (h *TransferHandler) GetMyTransfers(c echo.Context) error {
 // @Produce json
 // @Param transfer body transfer.ProcessTransferRequest true "Transfer acceptance details. TransferID and ReceiveDate are required."
 // @Success 200 {object} response.BaseValueResponse[entity.Transfer]
-// @Failure 400 {object} response.BaseResponse
-// @Failure 500 {object} response.BaseResponse
+// @Failure 400 {object} response.BaseResponse "Invalid request payload or missing TransferID"
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
 // @Router /transfers/accept [post]
+// @Security BearerAuth
 func (h *TransferHandler) AcceptTransfer(c echo.Context) error {
 	var req transfer.ProcessTransferRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[any]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "Invalid request payload: " + err.Error()}})
+		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "Invalid request payload: " + err.Error()}})
 	}
 	if req.TransferID == "" {
-		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[any]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "TransferID is required"}})
+		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "TransferID is required"}})
 	}
 	if req.ReceiveDate == nil {
 		now := time.Now()
 		req.ReceiveDate = &now
 	}
 
-	resp := h.Service.AcceptTransfer(c.Request().Context(), &req)
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler AcceptTransfer: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, response.BaseValueResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusInternalServerError, Message: "Failed to access network resources"}})
+	}
+
+	resp := h.Service.AcceptTransfer(contract, c.Request().Context(), &req)
 	if resp.Success {
 		return c.JSON(http.StatusOK, resp)
 	}
@@ -209,19 +260,27 @@ func (h *TransferHandler) AcceptTransfer(c echo.Context) error {
 // @Produce json
 // @Param transfer body transfer.ProcessTransferRequest true "Transfer rejection details. Only TransferID is required."
 // @Success 200 {object} response.BaseValueResponse[entity.Transfer]
-// @Failure 400 {object} response.BaseResponse
-// @Failure 500 {object} response.BaseResponse
+// @Failure 400 {object} response.BaseResponse "Invalid request payload or missing TransferID"
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
 // @Router /transfers/reject [post]
+// @Security BearerAuth
 func (h *TransferHandler) RejectTransfer(c echo.Context) error {
 	var req transfer.ProcessTransferRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[any]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "Invalid request payload: " + err.Error()}})
+		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "Invalid request payload: " + err.Error()}})
 	}
 	if req.TransferID == "" {
-		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[any]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "TransferID is required"}})
+		return c.JSON(http.StatusBadRequest, response.BaseValueResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusBadRequest, Message: "TransferID is required"}})
 	}
 
-	resp := h.Service.RejectTransfer(c.Request().Context(), &req)
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler RejectTransfer: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, response.BaseValueResponse[entity.Transfer]{Success: false, Error: &response.ErrorInfo{Code: http.StatusInternalServerError, Message: "Failed to access network resources"}})
+	}
+
+	resp := h.Service.RejectTransfer(contract, c.Request().Context(), &req)
 	if resp.Success {
 		return c.JSON(http.StatusOK, resp)
 	}

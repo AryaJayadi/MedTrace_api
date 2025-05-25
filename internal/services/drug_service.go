@@ -10,20 +10,22 @@ import (
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 )
 
-// DrugService handles drug-related operations
+// DrugService handles drug-related operations.
+// It no longer stores the contract directly.
 type DrugService struct {
-	contract *client.Contract
+	// No contract field here
 }
 
-// NewDrugService creates a new DrugService
-func NewDrugService(contract *client.Contract) *DrugService {
-	return &DrugService{contract: contract}
+// NewDrugService creates a new DrugService.
+// It no longer takes a contract as a parameter.
+func NewDrugService() *DrugService {
+	return &DrugService{}
 }
 
-// CreateDrug calls the CreateDrug chaincode function
-func (s *DrugService) CreateDrug(ctx context.Context, req *drug.CreateDrugRequest) response.BaseValueResponse[string] {
+// CreateDrug calls the CreateDrug chaincode function using the provided contract.
+func (s *DrugService) CreateDrug(contract *client.Contract, ctx context.Context, req *drug.CreateDrugRequest) response.BaseValueResponse[string] {
 	// Chaincode CreateDrug returns drugID string, not the full drug object directly from that call.
-	resultBytes, err := s.contract.SubmitTransaction("CreateDrug", req.OwnerID, req.BatchID, req.DrugID)
+	resultBytes, err := contract.SubmitTransaction("CreateDrug", req.OwnerID, req.BatchID, req.DrugID)
 	if err != nil {
 		return response.ErrorValueResponse[string](500, "Failed to submit CreateDrug transaction: %v", err)
 	}
@@ -32,9 +34,9 @@ func (s *DrugService) CreateDrug(ctx context.Context, req *drug.CreateDrugReques
 	return response.SuccessValueResponse(drugID)
 }
 
-// GetDrug calls the GetDrug chaincode function
-func (s *DrugService) GetDrug(ctx context.Context, drugID string) response.BaseValueResponse[entity.Drug] {
-	resultBytes, err := s.contract.EvaluateTransaction("GetDrug", drugID)
+// GetDrug calls the GetDrug chaincode function using the provided contract.
+func (s *DrugService) GetDrug(contract *client.Contract, ctx context.Context, drugID string) response.BaseValueResponse[entity.Drug] {
+	resultBytes, err := contract.EvaluateTransaction("GetDrug", drugID)
 	if err != nil {
 		return response.ErrorValueResponse[entity.Drug](500, "Failed to evaluate GetDrug transaction: %v", err)
 	}
@@ -50,9 +52,9 @@ func (s *DrugService) GetDrug(ctx context.Context, drugID string) response.BaseV
 	return response.SuccessValueResponse(drugEntity)
 }
 
-// GetMyDrugs calls the GetMyDrug chaincode function
-func (s *DrugService) GetMyDrugs(ctx context.Context) response.BaseListResponse[entity.Drug] {
-	resultBytes, err := s.contract.EvaluateTransaction("GetMyDrug")
+// GetMyDrugs calls the GetMyDrug chaincode function using the provided contract.
+func (s *DrugService) GetMyDrugs(contract *client.Contract, ctx context.Context) response.BaseListResponse[entity.Drug] {
+	resultBytes, err := contract.EvaluateTransaction("GetMyDrug")
 	if err != nil {
 		return response.ErrorListResponse[entity.Drug](500, "Failed to evaluate GetMyDrug transaction: %v", err)
 	}
@@ -72,9 +74,9 @@ func (s *DrugService) GetMyDrugs(ctx context.Context) response.BaseListResponse[
 	return response.SuccessListResponse(drugsPtrs)
 }
 
-// GetDrugByBatch calls the GetDrugByBatch chaincode function
-func (s *DrugService) GetDrugByBatch(ctx context.Context, batchID string) response.BaseListResponse[entity.Drug] {
-	resultBytes, err := s.contract.EvaluateTransaction("GetDrugByBatch", batchID)
+// GetDrugByBatch calls the GetDrugByBatch chaincode function using the provided contract.
+func (s *DrugService) GetDrugByBatch(contract *client.Contract, ctx context.Context, batchID string) response.BaseListResponse[entity.Drug] {
+	resultBytes, err := contract.EvaluateTransaction("GetDrugByBatch", batchID)
 	if err != nil {
 		return response.ErrorListResponse[entity.Drug](500, "Failed to evaluate GetDrugByBatch transaction: %v", err)
 	}
@@ -97,9 +99,9 @@ func (s *DrugService) GetDrugByBatch(ctx context.Context, batchID string) respon
 	return response.SuccessListResponse(drugsPtrs)
 }
 
-// GetMyAvailDrugs calls the GetMyAvailDrugs chaincode function
-func (s *DrugService) GetMyAvailDrugs(ctx context.Context) response.BaseListResponse[entity.Drug] {
-	resultBytes, err := s.contract.EvaluateTransaction("GetMyAvailDrugs")
+// GetMyAvailDrugs calls the GetMyAvailDrugs chaincode function using the provided contract.
+func (s *DrugService) GetMyAvailDrugs(contract *client.Contract, ctx context.Context) response.BaseListResponse[entity.Drug] {
+	resultBytes, err := contract.EvaluateTransaction("GetMyAvailDrugs")
 	if err != nil {
 		return response.ErrorListResponse[entity.Drug](500, "Failed to evaluate GetMyAvailDrugs transaction: %v", err)
 	}

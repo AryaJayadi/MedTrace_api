@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/AryaJayadi/MedTrace_api/internal/auth"
 	"github.com/AryaJayadi/MedTrace_api/internal/models/dto/drug"
 	"github.com/AryaJayadi/MedTrace_api/internal/services"
 	"github.com/labstack/echo/v4"
@@ -10,7 +11,7 @@ import (
 
 // DrugHandler handles HTTP requests for drugs
 type DrugHandler struct {
-	Service *services.DrugService // Renamed from 'service' to 'Service' for convention
+	Service *services.DrugService
 }
 
 // NewDrugHandler creates a new DrugHandler
@@ -26,14 +27,14 @@ func NewDrugHandler(drugService *services.DrugService) *DrugHandler {
 // @Produce json
 // @Param drug body drug.CreateDrugRequest true "Drug to create. OwnerID, BatchID, DrugID are required."
 // @Success 201 {object} response.BaseValueResponse[string]
-// @Failure 400 {object} response.BaseResponse "{ \"error\": \"Bad Request\" }"
-// @Failure 500 {object} response.BaseResponse "{ \"error\": \"Internal Server Error\" }"
+// @Failure 400 {object} response.BaseResponse "Invalid request payload or missing required fields"
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
 // @Router /drugs [post]
+// @Security BearerAuth
 func (h *DrugHandler) CreateDrug(c echo.Context) error {
 	var req drug.CreateDrugRequest
 	if err := c.Bind(&req); err != nil {
-		// Using the generic ErrorResponse from your response package structure for consistency if available
-		// Assuming BaseResponse has a structure for error, or use map[string]string
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusBadRequest, "message": "Invalid request payload: " + err.Error()}})
 	}
 
@@ -41,11 +42,17 @@ func (h *DrugHandler) CreateDrug(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusBadRequest, "message": "OwnerID, BatchID, and DrugID are required"}})
 	}
 
-	resp := h.Service.CreateDrug(c.Request().Context(), &req)
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler CreateDrug: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusInternalServerError, "message": "Failed to access network resources"}})
+	}
+
+	resp := h.Service.CreateDrug(contract, c.Request().Context(), &req)
 	status := http.StatusCreated
 	if !resp.Success {
-		status = resp.Error.Code // Assuming ErrorInfo has a Code field for HTTP status
-		if status == 0 {         // Default to 500 if code not set or invalid
+		status = resp.Error.Code
+		if status == 0 {
 			status = http.StatusInternalServerError
 		}
 	}
@@ -59,16 +66,25 @@ func (h *DrugHandler) CreateDrug(c echo.Context) error {
 // @Produce json
 // @Param drugID path string true "Drug ID"
 // @Success 200 {object} response.BaseValueResponse[entity.Drug]
-// @Failure 404 {object} response.BaseResponse "{ \"error\": \"Drug not found\" }"
-// @Failure 500 {object} response.BaseResponse "{ \"error\": \"Internal Server Error\" }"
+// @Failure 400 {object} response.BaseResponse "Invalid Drug ID"
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 404 {object} response.BaseResponse "Drug not found"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
 // @Router /drugs/{drugID} [get]
+// @Security BearerAuth
 func (h *DrugHandler) GetDrug(c echo.Context) error {
 	drugID := c.Param("drugID")
 	if drugID == "" {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusBadRequest, "message": "Drug ID parameter is required"}})
 	}
 
-	resp := h.Service.GetDrug(c.Request().Context(), drugID)
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler GetDrug: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusInternalServerError, "message": "Failed to access network resources"}})
+	}
+
+	resp := h.Service.GetDrug(contract, c.Request().Context(), drugID)
 	status := http.StatusOK
 	if !resp.Success {
 		status = resp.Error.Code
@@ -85,10 +101,18 @@ func (h *DrugHandler) GetDrug(c echo.Context) error {
 // @Tags drugs
 // @Produce json
 // @Success 200 {object} response.BaseListResponse[entity.Drug]
-// @Failure 500 {object} response.BaseResponse "{ \"error\": \"Internal Server Error\" }"
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
 // @Router /drugs/my [get]
+// @Security BearerAuth
 func (h *DrugHandler) GetMyDrugs(c echo.Context) error {
-	resp := h.Service.GetMyDrugs(c.Request().Context())
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler GetMyDrugs: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusInternalServerError, "message": "Failed to access network resources"}})
+	}
+
+	resp := h.Service.GetMyDrugs(contract, c.Request().Context())
 	status := http.StatusOK
 	if !resp.Success {
 		status = resp.Error.Code
@@ -106,16 +130,24 @@ func (h *DrugHandler) GetMyDrugs(c echo.Context) error {
 // @Produce json
 // @Param batchID path string true "Batch ID"
 // @Success 200 {object} response.BaseListResponse[entity.Drug]
-// @Failure 400 {object} response.BaseResponse "{ \"error\": \"Bad Request\" }"
-// @Failure 500 {object} response.BaseResponse "{ \"error\": \"Internal Server Error\" }"
+// @Failure 400 {object} response.BaseResponse "Invalid Batch ID"
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
 // @Router /drugs/batch/{batchID} [get]
+// @Security BearerAuth
 func (h *DrugHandler) GetDrugByBatch(c echo.Context) error {
 	batchID := c.Param("batchID")
 	if batchID == "" {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusBadRequest, "message": "Batch ID parameter is required"}})
 	}
 
-	resp := h.Service.GetDrugByBatch(c.Request().Context(), batchID)
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler GetDrugByBatch: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusInternalServerError, "message": "Failed to access network resources"}})
+	}
+
+	resp := h.Service.GetDrugByBatch(contract, c.Request().Context(), batchID)
 	status := http.StatusOK
 	if !resp.Success {
 		status = resp.Error.Code
@@ -132,10 +164,18 @@ func (h *DrugHandler) GetDrugByBatch(c echo.Context) error {
 // @Tags drugs
 // @Produce json
 // @Success 200 {object} response.BaseListResponse[entity.Drug]
-// @Failure 500 {object} response.BaseResponse "{ \"error\": \"Internal Server Error\" }"
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
 // @Router /drugs/my/available [get]
+// @Security BearerAuth
 func (h *DrugHandler) GetMyAvailDrugs(c echo.Context) error {
-	resp := h.Service.GetMyAvailDrugs(c.Request().Context())
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler GetMyAvailDrugs: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusInternalServerError, "message": "Failed to access network resources"}})
+	}
+
+	resp := h.Service.GetMyAvailDrugs(contract, c.Request().Context())
 	status := http.StatusOK
 	if !resp.Success {
 		status = resp.Error.Code
