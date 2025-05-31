@@ -70,6 +70,7 @@ func main() {
 	// --- Public Routes ---
 	e.POST("/login", auth.LoginHandler)
 	e.POST("/logout", auth.LogoutHandler) // Or GET, but POST is often preferred for logout
+	e.POST("/refresh", auth.RefreshTokenHandler)
 
 	// --- Protected Route Groups ---
 	// These groups will use the AuthMiddleware to ensure a valid JWT and set up the Fabric context.
