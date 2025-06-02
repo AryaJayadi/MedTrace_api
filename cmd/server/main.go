@@ -71,6 +71,7 @@ func main() {
 	e.POST("/login", auth.LoginHandler)
 	e.POST("/logout", auth.LogoutHandler) // Or GET, but POST is often preferred for logout
 	e.POST("/refresh", auth.RefreshTokenHandler)
+	e.GET("/history/drug/:drugID", drugHandler.GetHistoryDrug)
 
 	// --- Protected Route Groups ---
 	// These groups will use the AuthMiddleware to ensure a valid JWT and set up the Fabric context.

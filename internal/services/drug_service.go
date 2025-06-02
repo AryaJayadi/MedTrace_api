@@ -119,3 +119,23 @@ func (s *DrugService) GetMyAvailDrugs(contract *client.Contract, ctx context.Con
 
 	return response.SuccessListResponse(drugsPtrs)
 }
+
+func (s *DrugService) GetHistoryDrug(contract *client.Contract, ctx context.Context, drugID string) response.BaseListResponse[entity.HistoryDrug] {
+	resultBytes, err := contract.EvaluateTransaction("GetHistoryDrug", drugID)
+	if err != nil {
+		return response.ErrorListResponse[entity.HistoryDrug](500, "Failed to evaluate GetHistoryDrug transaction: %v", err)
+	}
+
+	var records []entity.HistoryDrug
+	err = json.Unmarshal(resultBytes, &records)
+	if err != nil {
+		return response.ErrorListResponse[entity.HistoryDrug](500, "Failed to unmarshal history drug data for GetHistoryDrug: %v", err)
+	}
+
+	recordsPtrs := make([]*entity.HistoryDrug, len(records))
+	for i := range records {
+		recordsPtrs[i] = &records[i]
+	}
+
+	return response.SuccessListResponse(recordsPtrs)
+}

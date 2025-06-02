@@ -185,3 +185,35 @@ func (h *DrugHandler) GetMyAvailDrugs(c echo.Context) error {
 	}
 	return c.JSON(status, resp)
 }
+
+// GetHistoryDrug godoc
+// @Summary Get history for drugs
+// @Description Retrieve history records for all drugs, including creation and deletion events.
+// @Tags drugs
+// @Produce json
+// @Success 200 {object} response.BaseListResponse[entity.HistoryDrug]
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
+// @Router /history/drug/{drugID} [get]
+func (h *DrugHandler) GetHistoryDrug(c echo.Context) error {
+	drugID := c.Param("drugID")
+	if drugID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusBadRequest, "message": "Drug ID parameter is required"}})
+	}
+
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler GetHistoryDrug: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusInternalServerError, "message": "Failed to access network resources"}})
+	}
+
+	resp := h.Service.GetHistoryDrug(contract, c.Request().Context(), drugID)
+	status := http.StatusOK
+	if !resp.Success {
+		status = resp.Error.Code
+		if status == 0 {
+			status = http.StatusInternalServerError
+		}
+	}
+	return c.JSON(status, resp)
+}
