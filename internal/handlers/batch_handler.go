@@ -132,6 +132,11 @@ func (h *BatchHandler) GetAllBatches(c echo.Context) error {
 // @Router /batches [patch]  // Consider /batches/{id} if updating a specific batch by ID in path
 // @Security BearerAuth
 func (h *BatchHandler) UpdateBatch(c echo.Context) error {
+	batchID := c.Param("id")
+	if batchID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusBadRequest, "message": "Batch ID parameter is required"}})
+	}
+
 	var req batch.UpdateBatch
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusBadRequest, "message": "Invalid request payload: " + err.Error()}})
@@ -143,7 +148,7 @@ func (h *BatchHandler) UpdateBatch(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{"success": false, "error": map[string]interface{}{"code": http.StatusInternalServerError, "message": "Failed to access network resources"}})
 	}
 
-	resp := h.Service.UpdateBatch(contract, c.Request().Context(), &req)
+	resp := h.Service.UpdateBatch(contract, c.Request().Context(), batchID, &req)
 	status := http.StatusOK
 	if !resp.Success {
 		status = resp.Error.Code

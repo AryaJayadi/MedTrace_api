@@ -85,7 +85,7 @@ func main() {
 	batchesGroup.GET("", batchHandler.GetAllBatches)
 	batchesGroup.GET("/:id/exists", batchHandler.BatchExists)
 	batchesGroup.GET("/:id", batchHandler.GetBatchByID)
-	batchesGroup.PATCH("/batches", batchHandler.UpdateBatch) // Note: Route was /batches, should it be /:id?
+	batchesGroup.PATCH("/:id", batchHandler.UpdateBatch)
 
 	ledgerGroup := e.Group("/ledger", auth.AuthMiddleware)
 	ledgerGroup.POST("/init", ledgerHandler.InitLedger)

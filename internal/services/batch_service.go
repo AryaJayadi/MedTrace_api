@@ -63,13 +63,13 @@ func (s *BatchService) GetAllBatches(contract *client.Contract, ctx context.Cont
 }
 
 // UpdateBatch updates an existing batch on the ledger using the provided contract.
-func (s *BatchService) UpdateBatch(contract *client.Contract, ctx context.Context, req *batch.UpdateBatch) response.BaseValueResponse[entity.Batch] {
+func (s *BatchService) UpdateBatch(contract *client.Contract, ctx context.Context, batchID string, req *batch.UpdateBatch) response.BaseValueResponse[entity.Batch] {
 	reqJSON, err := json.Marshal(req)
 	if err != nil {
 		return response.ErrorValueResponse[entity.Batch](500, "Failed to marshal request: %v", err)
 	}
 
-	resp, err := contract.SubmitTransaction("UpdateBatch", string(reqJSON))
+	resp, err := contract.SubmitTransaction("UpdateBatch", batchID, string(reqJSON))
 	if err != nil {
 		return response.ErrorValueResponse[entity.Batch](500, "Failed to submit transaction to Fabric: %v", err)
 	}
