@@ -96,6 +96,7 @@ func main() {
 	drugsGroup.GET("/my/available", drugHandler.GetMyAvailDrugs)
 	drugsGroup.GET("/:drugID", drugHandler.GetDrug)
 	drugsGroup.GET("/batch/:batchID", drugHandler.GetDrugByBatch)
+	drugsGroup.GET("/transfer/:transferID", drugHandler.GetDrugByTransfer)
 	drugsGroup.GET("/history/:drugID", drugHandler.GetHistoryDrug)
 
 	transferGroup := e.Group("/transfers", auth.AuthMiddleware)

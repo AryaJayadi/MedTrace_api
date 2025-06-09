@@ -99,6 +99,29 @@ func (s *DrugService) GetDrugByBatch(contract *client.Contract, ctx context.Cont
 	return response.SuccessListResponse(drugsPtrs)
 }
 
+func (s *DrugService) GetDrugByTransfer(contract *client.Contract, ctx context.Context, transferID string) response.BaseListResponse[entity.Drug] {
+	resultBytes, err := contract.EvaluateTransaction("GetDrugByTransfer", transferID)
+	if err != nil {
+		return response.ErrorListResponse[entity.Drug](500, "Failed to evaluate GetDrugByTransfer: %v", err)
+	}
+	if len(resultBytes) == 0 {
+		return response.SuccessListResponse([]*entity.Drug{})
+	}
+
+	var drugs []entity.Drug
+	err = json.Unmarshal(resultBytes, &drugs)
+	if err != nil {
+		return response.ErrorListResponse[entity.Drug](500, "Failed to unmarshal drugs data for GetDrugByTransfer: %v", err)
+	}
+
+	drugsPtrs := make([]*entity.Drug, len(drugs))
+	for i := range drugs {
+		drugsPtrs[i] = &drugs[i]
+	}
+
+	return response.SuccessListResponse(drugsPtrs)
+}
+
 // GetMyAvailDrugs calls the GetMyAvailDrugs chaincode function using the provided contract.
 func (s *DrugService) GetMyAvailDrugs(contract *client.Contract, ctx context.Context) response.BaseListResponse[entity.Drug] {
 	resultBytes, err := contract.EvaluateTransaction("GetMyAvailDrugs")

@@ -5,6 +5,8 @@ import (
 
 	"github.com/AryaJayadi/MedTrace_api/internal/auth"
 	"github.com/AryaJayadi/MedTrace_api/internal/models/dto/drug"
+	"github.com/AryaJayadi/MedTrace_api/internal/models/entity"
+	"github.com/AryaJayadi/MedTrace_api/internal/models/response"
 	"github.com/AryaJayadi/MedTrace_api/internal/services"
 	"github.com/labstack/echo/v4"
 )
@@ -148,6 +150,41 @@ func (h *DrugHandler) GetDrugByBatch(c echo.Context) error {
 	}
 
 	resp := h.Service.GetDrugByBatch(contract, c.Request().Context(), batchID)
+	status := http.StatusOK
+	if !resp.Success {
+		status = resp.Error.Code
+		if status == 0 {
+			status = http.StatusInternalServerError
+		}
+	}
+	return c.JSON(status, resp)
+}
+
+// GetDrugByTransfer godoc
+// @Summary Get drugs by transfer ID
+// @Description Retrieve all drug assets associated with a specific transfer ID from the ledger
+// @Tags drugs
+// @Produce json
+// @Param transferID path string true "Transfer ID"
+// @Success 200 {object} response.BaseListResponse[entity.Drug]
+// @Failure 400 {object} response.BaseResponse "Invalid Batch ID"
+// @Failure 401 {object} response.BaseResponse "Unauthorized - JWT invalid or missing"
+// @Failure 500 {object} response.BaseResponse "Internal server error or Fabric error"
+// @Router /drugs/transfer/{transferID} [get]
+// @Security BearerAuth
+func (h *DrugHandler) GetDrugByTransfer(c echo.Context) error {
+	transferID := c.Param("transferID")
+	if transferID == "" {
+		return c.JSON(http.StatusBadRequest, response.ErrorListResponse[entity.Drug](400, "Transfer ID parameter is required"))
+	}
+
+	contract, err := auth.GetContractFromContext(c)
+	if err != nil {
+		c.Logger().Errorf("Handler GetDrugByTransfer: Failed to get contract from context: %v", err)
+		return c.JSON(http.StatusInternalServerError, response.ErrorListResponse[entity.Drug](500, "Failed to access network resources"))
+	}
+
+	resp := h.Service.GetDrugByTransfer(contract, c.Request().Context(), transferID)
 	status := http.StatusOK
 	if !resp.Success {
 		status = resp.Error.Code
